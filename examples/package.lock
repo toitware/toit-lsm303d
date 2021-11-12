@@ -1,0 +1,5 @@
+prefixes:
+  lsm303d: ..
+packages:
+  ..:
+    path: ..
