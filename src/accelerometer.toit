@@ -1,5 +1,5 @@
 // Copyright (C) 2021 Toitware ApS. All rights reserved.
-// Use of this source code is governed by a MIT-style license that can be found
+// Use of this source code is governed by an MIT-style license that can be found
 // in the LICENSE file.
 
 import serial.device as serial
@@ -33,7 +33,6 @@ class Accelerometer:
   static RANGE_6G  ::= 2
   static RANGE_8G  ::= 3
   static RANGE_16G ::= 4
-
 
   // Section 7. Table 16. Register mapping.
   static WHO_AM_I_ ::= 0x0F
@@ -94,7 +93,7 @@ class Accelerometer:
     // 8.17. CTRL1.
     rate_bits := rate << 4
 
-    // We always enable all three axis.
+    // We always enable all three axes.
     axis_bits := 0b111
 
     ctrl1 := rate_bits | axis_bits

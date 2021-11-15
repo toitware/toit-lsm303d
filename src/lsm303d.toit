@@ -1,5 +1,5 @@
 // Copyright (C) 2021 Toitware ApS. All rights reserved.
-// Use of this source code is governed by a MIT-style license that can be found
+// Use of this source code is governed by an MIT-style license that can be found
 // in the LICENSE file.
 
 import .accelerometer
@@ -13,7 +13,6 @@ class Lsm303d:
 
   accelerometer /Accelerometer
   magnetometer  /Magnetometer
-
 
   constructor device/serial.Device --mag_calibration/List?=null:
     accelerometer = Accelerometer device

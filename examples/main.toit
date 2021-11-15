@@ -1,4 +1,4 @@
-// Copyright (C) 2021 Toitware ApS. All rights reserved.
+// Copyright (C) 2021 Toitware ApS.
 // Use of this source code is governed by a Zero-Clause BSD license that can
 // be found in the EXAMPLES_LICENSE file.
 
@@ -29,5 +29,5 @@ main:
     print "Temperature: $temp"
 
     field := lsm303d.magnetometer.read
-    print "Magnetic field (in micro-tesla): $field"
+    print "Magnetic field (in microtesla): $field"
     sleep --ms=2000

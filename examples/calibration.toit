@@ -1,4 +1,4 @@
-// Copyright (C) 2021 Toitware ApS. All rights reserved.
+// Copyright (C) 2021 Toitware ApS.
 // Use of this source code is governed by a Zero-Clause BSD license that can
 // be found in the EXAMPLES_LICENSE file.
 
@@ -52,7 +52,7 @@ main:
     if z > max_z: max_z = z
     counter++
     // Update the store every 32 values.
-    if counter % 0x1F == 0:
+    if counter & 0x1F == 0:
       calibration := [(max_x + min_x) / 2, (max_y + min_y) / 2, (max_z + min_z) / 2]
       if calibration != old_calibration:
         old_calibration = calibration

@@ -1,5 +1,5 @@
 // Copyright (C) 2021 Toitware ApS. All rights reserved.
-// Use of this source code is governed by a MIT-style license that can be found
+// Use of this source code is governed by an MIT-style license that can be found
 // in the LICENSE file.
 
 import serial.device as serial
@@ -12,7 +12,6 @@ Driver for the magnetometer of the LSM303D module.
 class Magnetometer:
   static I2C_ADDRESS ::= 0b11101  // 6.1.1.
   static I2C_ADDRESS_ALT ::= 0b11110
-
 
   // Section 7. Table 16. Register mapping.
   static WHO_AM_I_ ::= 0x0F
@@ -125,7 +124,7 @@ class Magnetometer:
 
   /**
   Reads the magnetic field.
-  The returned values are in micro-tesla.
+  The returned values are in microtesla.
   If a value is out of range, +-$float.INFINITY is used. In this case
     changing the range (see $enable) might be an option to allow the
     sensor to measure the magnetic field.
