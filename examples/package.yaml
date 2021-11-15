@@ -1,0 +1,3 @@
+dependencies:
+  lsm303d:
+    path: ..
