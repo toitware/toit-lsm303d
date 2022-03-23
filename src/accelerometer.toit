@@ -52,6 +52,7 @@ class Accelerometer:
   static GRAVITY_STANDARD_ ::= 9.80665
 
   reg_ /serial.Registers
+  range_ /int := 0
 
   constructor dev/serial.Device:
     reg_ = dev.registers
@@ -94,9 +95,9 @@ class Accelerometer:
     rate_bits := rate << 4
 
     // We always enable all three axes.
-    axis_bits := 0b111
+    axes_bits := 0b111
 
-    ctrl1 := rate_bits | axis_bits
+    ctrl1 := rate_bits | axes_bits
 
     // 8.18. CTRL2.
     // Anti-alias filter bandwith set to default (0).
@@ -104,6 +105,7 @@ class Accelerometer:
     // Acceleration self-test: disabled. (0)
     // SPI disabled. (0)
     if not 0 <= range <= 4: throw "INVALID_RANGE"
+    range_ = range
     ctrl2 := range << 3
 
     reg_.write_u8 CTRL1_ ctrl1
@@ -128,30 +130,10 @@ class Accelerometer:
   The returned values are in in m/s².
   */
   read -> math.Point3f:
-    /*
-    // TODO(florian): why can't we use `read_i16_le` ?
-    x := reg_.read_i16_le OUT_X_L_A_
-    y := reg_.read_i16_le OUT_Y_L_A_
-    z := reg_.read_i16_le OUT_Z_L_A_
-    */
-    x_low  := reg_.read_u8 OUT_X_L_A_
-    x_high := reg_.read_u8 OUT_X_H_A_
-    y_low  := reg_.read_u8 OUT_Y_L_A_
-    y_high := reg_.read_u8 OUT_Y_H_A_
-    z_low  := reg_.read_u8 OUT_Z_L_A_
-    z_high := reg_.read_u8 OUT_Z_H_A_
-
-    x := (x_high << 8) + x_low
-    y := (y_high << 8) + y_low
-    z := (z_high << 8) + z_low
-    if x & 0x8000 != 0: x -= 0x10000
-    if y & 0x8000 != 0: y -= 0x10000
-    if z & 0x8000 != 0: z -= 0x10000
-
-    // The scaling (range) affects the value, so we need to read that one.
-    // We could also cache the current scaling so we don't need to do yet
-    // another I2C call.
-    range := read_range
+    AUTO_INCREMENT_BIT ::= 0b1000_0000
+    x := reg_.read_i16_le (OUT_X_L_A_ | AUTO_INCREMENT_BIT)
+    y := reg_.read_i16_le (OUT_Y_L_A_ | AUTO_INCREMENT_BIT)
+    z := reg_.read_i16_le (OUT_Z_L_A_ | AUTO_INCREMENT_BIT)
 
     // Section 2.1, table3:
     // The linear acceleration sensitivity depends on the range:
@@ -160,16 +142,11 @@ class Accelerometer:
     // - RANGE_6G:   0.183mg/LSB
     // - RANGE_8G:   0.244mg/LSB
     // - RANGE_16G:  0.732mg/LSB   // <- Note that the 16G sensitivity is not 0.488mg/LSB as expected.
-    if range != RANGE_16G:
-      // It just happens that RANGE_2G to RANGE_8G can be calculated this way.
-      // We could also make 5 ifs.
-      x *= range + 1
-      y *= range + 1
-      z *= range + 1
-    else:
-      x *= 12
-      y *= 12
-      z *= 12
+    SENSITIVITIES ::= #[1, 2, 3, 4, 12]  // As factors of 0.061.
+    sensitivity := SENSITIVITIES[range_]
+    x *= sensitivity
+    y *= sensitivity
+    z *= sensitivity
 
     factor := GRAVITY_STANDARD_ * 0.061 / 1000.0  // Constant folded because it's one expression.
     return math.Point3f
@@ -180,19 +157,10 @@ class Accelerometer:
   read --raw/bool -> List:
     if not raw: throw "INVALID_ARGUMENT"
 
-    x_low  := reg_.read_u8 OUT_X_L_A_
-    x_high := reg_.read_u8 OUT_X_H_A_
-    y_low  := reg_.read_u8 OUT_Y_L_A_
-    y_high := reg_.read_u8 OUT_Y_H_A_
-    z_low  := reg_.read_u8 OUT_Z_L_A_
-    z_high := reg_.read_u8 OUT_Z_H_A_
-
-    x := (x_high << 8) + x_low
-    y := (y_high << 8) + y_low
-    z := (z_high << 8) + z_low
-    if x & 0x8000 != 0: x -= 0x10000
-    if y & 0x8000 != 0: y -= 0x10000
-    if z & 0x8000 != 0: z -= 0x10000
+    AUTO_INCREMENT_BIT ::= 0b1000_0000
+    x := reg_.read_i16_le (OUT_X_L_A_ | AUTO_INCREMENT_BIT)
+    y := reg_.read_i16_le (OUT_Y_L_A_ | AUTO_INCREMENT_BIT)
+    z := reg_.read_i16_le (OUT_Z_L_A_ | AUTO_INCREMENT_BIT)
 
     return [x, y, z]
 
