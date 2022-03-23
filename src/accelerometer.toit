@@ -52,6 +52,7 @@ class Accelerometer:
   static GRAVITY_STANDARD_ ::= 9.80665
 
   reg_ /serial.Registers
+  range_ /int := 0
 
   constructor dev/serial.Device:
     reg_ = dev.registers
@@ -104,6 +105,7 @@ class Accelerometer:
     // Acceleration self-test: disabled. (0)
     // SPI disabled. (0)
     if not 0 <= range <= 4: throw "INVALID_RANGE"
+    range_ = range
     ctrl2 := range << 3
 
     reg_.write_u8 CTRL1_ ctrl1
@@ -133,11 +135,6 @@ class Accelerometer:
     y := reg_.read_i16_le (OUT_Y_L_A_ | AUTO_INCREMENT_BIT)
     z := reg_.read_i16_le (OUT_Z_L_A_ | AUTO_INCREMENT_BIT)
 
-    // The scaling (range) affects the value, so we need to read that one.
-    // We could also cache the current scaling so we don't need to do yet
-    // another I2C call.
-    range := read_range
-
     // Section 2.1, table3:
     // The linear acceleration sensitivity depends on the range:
     // - RANGE_2G:   0.061mg/LSB
@@ -145,16 +142,11 @@ class Accelerometer:
     // - RANGE_6G:   0.183mg/LSB
     // - RANGE_8G:   0.244mg/LSB
     // - RANGE_16G:  0.732mg/LSB   // <- Note that the 16G sensitivity is not 0.488mg/LSB as expected.
-    if range != RANGE_16G:
-      // It just happens that RANGE_2G to RANGE_8G can be calculated this way.
-      // We could also make 5 ifs.
-      x *= range + 1
-      y *= range + 1
-      z *= range + 1
-    else:
-      x *= 12
-      y *= 12
-      z *= 12
+    SENSITIVITIES ::= #[1, 2, 3, 4, 12]  // As factors of 0.061.
+    sensitivity := SENSITIVITIES[range_]
+    x *= sensitivity
+    y *= sensitivity
+    z *= sensitivity
 
     factor := GRAVITY_STANDARD_ * 0.061 / 1000.0  // Constant folded because it's one expression.
     return math.Point3f
