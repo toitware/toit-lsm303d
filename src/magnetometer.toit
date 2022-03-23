@@ -47,6 +47,8 @@ class Magnetometer:
 
   reg_ /serial.Registers
   calibration_ /List
+  range_ /int := 0
+
 
   /**
   Constructs a new Magnetometer.
@@ -85,6 +87,7 @@ class Magnetometer:
     // Section 8.22.
     // Set the range.
     ctrl6 := range << 5
+    range_ = range
     reg_.write_u8 CTRL6_ ctrl6
 
     // Section 8.23. Table 54.
@@ -130,35 +133,17 @@ class Magnetometer:
     sensor to measure the magnetic field.
   */
   read -> math.Point3f:
-    /*
-    // TODO(florian): figure out why we can't read 16 bits in one go.
-    x := reg_.read_i16_le OUT_X_H_M_
-    z := reg_.read_i16_le OUT_Z_H_M_
-    y := reg_.read_i16_le OUT_Y_H_M_
-    */
-
-    x_low  := reg_.read_u8 OUT_X_L_M_
-    x_high := reg_.read_u8 OUT_X_H_M_
-    y_low  := reg_.read_u8 OUT_Y_L_M_
-    y_high := reg_.read_u8 OUT_Y_H_M_
-    z_low  := reg_.read_u8 OUT_Z_L_M_
-    z_high := reg_.read_u8 OUT_Z_H_M_
-
-    x := (x_high << 8) + x_low
-    y := (y_high << 8) + y_low
-    z := (z_high << 8) + z_low
-    if x & 0x8000 != 0: x -= 0x10000
-    if y & 0x8000 != 0: y -= 0x10000
-    if z & 0x8000 != 0: z -= 0x10000
-
-    range := read_range
+    AUTO_INCREMENT_BIT ::= 0b1000_0000
+    x := reg_.read_i16_le (OUT_X_L_M_ | AUTO_INCREMENT_BIT)
+    z := reg_.read_i16_le (OUT_Z_L_M_ | AUTO_INCREMENT_BIT)
+    y := reg_.read_i16_le (OUT_Y_L_M_ | AUTO_INCREMENT_BIT)
 
     gain := ?
-    if range == RANGE_2G: gain = 0.080
-    else if range == RANGE_4G: gain = 0.160
-    else if range == RANGE_8G: gain = 0.320
+    if range_ == RANGE_2G: gain = 0.080
+    else if range_ == RANGE_4G: gain = 0.160
+    else if range_ == RANGE_8G: gain = 0.320
     else:
-      assert: range == RANGE_12G
+      assert: range_ == RANGE_12G
       // Note that this is not a multiple of 0.080 which would have made
       // things easier.
       gain = 0.479
@@ -194,25 +179,10 @@ class Magnetometer:
   */
   read --raw/bool -> List:
     if not raw: throw "INVALID_ARGUMENT"
-    /*
-    // TODO(florian): figure out why we can't read 16 bits in one go.
-    x := reg_.read_i16_le OUT_X_H_M_
-    z := reg_.read_i16_le OUT_Z_H_M_
-    y := reg_.read_i16_le OUT_Y_H_M_
-    */
 
-    x_low  := reg_.read_u8 OUT_X_L_M_
-    x_high := reg_.read_u8 OUT_X_H_M_
-    y_low  := reg_.read_u8 OUT_Y_L_M_
-    y_high := reg_.read_u8 OUT_Y_H_M_
-    z_low  := reg_.read_u8 OUT_Z_L_M_
-    z_high := reg_.read_u8 OUT_Z_H_M_
-
-    x := (x_high << 8) + x_low
-    y := (y_high << 8) + y_low
-    z := (z_high << 8) + z_low
-    if x & 0x8000 != 0: x -= 0x10000
-    if y & 0x8000 != 0: y -= 0x10000
-    if z & 0x8000 != 0: z -= 0x10000
+    AUTO_INCREMENT_BIT ::= 0b1000_0000
+    x := reg_.read_i16_le (OUT_X_H_M_ | AUTO_INCREMENT_BIT)
+    z := reg_.read_i16_le (OUT_Z_H_M_ | AUTO_INCREMENT_BIT)
+    y := reg_.read_i16_le (OUT_Y_H_M_ | AUTO_INCREMENT_BIT)
 
     return [x, y, z]
