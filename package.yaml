@@ -1,1 +1,2 @@
-# Toit Package File.
+name: lsm303d
+description: Driver for the LSM303D accelerometer and magnetometer.
