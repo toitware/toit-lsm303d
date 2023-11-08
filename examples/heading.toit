@@ -6,7 +6,7 @@ import gpio
 import i2c
 import math
 import lsm303d show *
-import device show FlashStore
+import system.storage
 
 /**
 Example program demonstrating the 'heading' function of the LSM303D.
@@ -18,9 +18,9 @@ main:
     --scl=gpio.Pin 22
 
   device := bus.device Lsm303d.I2C_ADDRESS
-  store := FlashStore
+  bucket := storage.Bucket.open --flash "toitware/toit-lsm303d"
   // If it doesn't exist, then the default value is used.
-  mag_calibration := store.get "lsm303d-mag-calibration"
+  mag_calibration := bucket.get "lsm303d-mag-calibration"
   if mag_calibration:
     print "Using calibration: $mag_calibration"
 

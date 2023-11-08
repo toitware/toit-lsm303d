@@ -5,7 +5,7 @@
 import gpio
 import i2c
 import lsm303d show *
-import device show FlashStore
+import system.storage
 
 /**
 Example program to show how to calibrate the magnetometer of the LSM303D.
@@ -21,7 +21,7 @@ The calibration settings are stored in the flash with the key
 */
 
 main:
-  store := FlashStore
+  bucket := storage.Bucket.open --flash "toitware/toit-lsm303d"
   bus := i2c.Bus
     --sda=gpio.Pin 21
     --scl=gpio.Pin 22
@@ -56,6 +56,6 @@ main:
       calibration := [(max_x + min_x) / 2, (max_y + min_y) / 2, (max_z + min_z) / 2]
       if calibration != old_calibration:
         old_calibration = calibration
-        store.set "lsm303d-mag-calibration" calibration
+        bucket["lsm303d-mag-calibration"] = calibration
         print "New calibration: $calibration"
     sleep --ms=50
