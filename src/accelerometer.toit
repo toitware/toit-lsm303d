@@ -100,7 +100,7 @@ class Accelerometer:
     ctrl1 := rate_bits | axes_bits
 
     // 8.18. CTRL2.
-    // Anti-alias filter bandwith set to default (0).
+    // Anti-alias filter bandwidth set to default (0).
     // Acceleration scaling (range).
     // Acceleration self-test: disabled. (0)
     // SPI disabled. (0)
