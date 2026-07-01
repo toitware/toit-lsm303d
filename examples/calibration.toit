@@ -2,7 +2,6 @@
 // Use of this source code is governed by a Zero-Clause BSD license that can
 // be found in the EXAMPLES_LICENSE file.
 
-import gpio
 import i2c
 import lsm303d show *
 import system.storage
@@ -23,8 +22,8 @@ The calibration settings are stored in the flash with the key
 main:
   bucket := storage.Bucket.open --flash "toitware/toit-lsm303d"
   bus := i2c.Bus
-    --sda=gpio.Pin 21
-    --scl=gpio.Pin 22
+    --sda=21
+    --scl=22
 
   device := bus.device Lsm303d.I2C_ADDRESS
   lsm303d := Lsm303d device
