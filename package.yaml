@@ -1,2 +1,4 @@
 name: lsm303d
 description: Driver for the LSM303D accelerometer and magnetometer.
+environment:
+  sdk: ^2.0.0-alpha.196
