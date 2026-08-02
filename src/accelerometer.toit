@@ -4,6 +4,7 @@
 
 import serial.device as serial
 import serial.registers as serial
+import io
 import math
 
 /**
@@ -44,6 +45,9 @@ class Accelerometer:
   static OUT_Y_H_A_ ::= 0x2B
   static OUT_Z_L_A_ ::= 0x2C
   static OUT_Z_H_A_ ::= 0x2D
+
+  static BDU_BIT_ ::= 1 << 3
+  static AUTO_INCREMENT_BIT_ ::= 1 << 7
 
   /**
   Standard acceleration due to gravity.
@@ -98,6 +102,8 @@ class Accelerometer:
     axes_bits := 0b111
 
     ctrl1 := rate_bits | axes_bits
+    // Prevent an update while output bytes are being read.
+    ctrl1 |= BDU_BIT_
 
     // 8.18. CTRL2.
     // Anti-alias filter bandwidth set to default (0).
@@ -122,18 +128,18 @@ class Accelerometer:
   disable:
     // Fundamentally we only care for the rate-bits: as long as they
     // are 0, the device is disabled.
-    // It's safe to change the other bits as well.
-    reg_.write_u8 CTRL1_ 0x00
+    // Keep BDU enabled because it also applies to magnetic data.
+    reg_.write_u8 CTRL1_ (BDU_BIT_ | 0b111)
 
   /**
   Reads the x, y and z axis.
   The returned values are in in m/s².
   */
   read -> math.Point3f:
-    AUTO_INCREMENT_BIT ::= 0b1000_0000
-    x := reg_.read_i16_le (OUT_X_L_A_ | AUTO_INCREMENT_BIT)
-    y := reg_.read_i16_le (OUT_Y_L_A_ | AUTO_INCREMENT_BIT)
-    z := reg_.read_i16_le (OUT_Z_L_A_ | AUTO_INCREMENT_BIT)
+    raw := read_raw_
+    x := raw[0]
+    y := raw[1]
+    z := raw[2]
 
     // Section 2.1, table3:
     // The linear acceleration sensitivity depends on the range:
@@ -157,12 +163,7 @@ class Accelerometer:
   read --raw/bool -> List:
     if not raw: throw "INVALID_ARGUMENT"
 
-    AUTO_INCREMENT_BIT ::= 0b1000_0000
-    x := reg_.read_i16_le (OUT_X_L_A_ | AUTO_INCREMENT_BIT)
-    y := reg_.read_i16_le (OUT_Y_L_A_ | AUTO_INCREMENT_BIT)
-    z := reg_.read_i16_le (OUT_Z_L_A_ | AUTO_INCREMENT_BIT)
-
-    return [x, y, z]
+    return read_raw_
 
   /**
   Reads the current range setting of the sensor.
@@ -172,3 +173,10 @@ class Accelerometer:
     reg4 := reg_.read_u8 CTRL2_
     return (reg4 >> 3) & 0b111
 
+  read_raw_ -> List:
+    bytes := reg_.read_bytes (OUT_X_L_A_ | AUTO_INCREMENT_BIT_) 6
+    return [
+      io.LITTLE_ENDIAN.int16 bytes 0,
+      io.LITTLE_ENDIAN.int16 bytes 2,
+      io.LITTLE_ENDIAN.int16 bytes 4,
+    ]
