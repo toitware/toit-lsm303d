@@ -101,8 +101,9 @@ class Accelerometer:
     // We always enable all three axes.
     axes_bits := 0b111
 
+    ctrl1 := rate_bits | axes_bits
     // Prevent an update while output bytes are being read.
-    ctrl1 := rate_bits | BDU_BIT_ | axes_bits
+    ctrl1 |= BDU_BIT_
 
     // 8.18. CTRL2.
     // Anti-alias filter bandwidth set to default (0).
