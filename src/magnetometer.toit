@@ -4,6 +4,7 @@
 
 import serial.device as serial
 import serial.registers as serial
+import io
 import math
 
 /**
@@ -23,9 +24,13 @@ class Magnetometer:
   static OUT_Y_H_M_ ::= 0x0B
   static OUT_Z_L_M_ ::= 0x0C
   static OUT_Z_H_M_ ::= 0x0D
+  static CTRL1_ ::= 0x20
   static CTRL5_ ::= 0x24
   static CTRL6_ ::= 0x25
   static CTRL7_ ::= 0x26
+
+  static BDU_BIT_ ::= 1 << 3
+  static AUTO_INCREMENT_BIT_ ::= 1 << 7
 
   // Section 8.21, Table 47.
   static RATE_3_125HZ ::= 0
@@ -46,23 +51,27 @@ class Magnetometer:
   static GAUSS_TO_MICROTESLA_ ::= 100.0
 
   reg_ /serial.Registers
-  calibration_ /List
+  calibration_offsets_ /List := [0, 0, 0]
+  calibration_scales_ /List := [1.0, 1.0, 1.0]
   range_ /int := 0
 
 
   /**
   Constructs a new Magnetometer.
 
-  The $calibration should be a 3-element list, containing the
-    the calibration value of each axis. The calibration value is
-    simply the average value of min and max raw values (see $(read --raw)).
-    Typically, the user moves the sensor in a figure 8, while the
-    calibration program is collecting all seen values.
+  The $calibration may be a 6-element list containing the minimum values for
+    X, Y, and Z followed by the maximum values for X, Y, and Z. These values
+    correct both the offset and relative scale of each axis. Typically, the
+    user moves the sensor in a figure 8 while the calibration program collects
+    all seen values.
+
+  For backwards compatibility, a 3-element list is interpreted as an offset
+    for each axis.
   */
   constructor dev/serial.Device --calibration=[0, 0, 0]:
     reg_ = dev.registers
 
-    calibration_ = calibration
+    set_calibration_ calibration
 
     id := reg_.read_u8 WHO_AM_I_
     // Section 8.6, Table 19.
@@ -90,6 +99,10 @@ class Magnetometer:
     range_ = range
     reg_.write_u8 CTRL6_ ctrl6
 
+    // BDU is in CTRL1 and applies to both acceleration and magnetic data.
+    ctrl1 := reg_.read_u8 CTRL1_
+    reg_.write_u8 CTRL1_ (ctrl1 | BDU_BIT_)
+
     // Section 8.23. Table 54.
     // High-pass filter. Default 0.
     // Filtered acceleration data selection. Default 0.
@@ -109,20 +122,15 @@ class Magnetometer:
   Returns the result in Celsius.
   */
   read_temperature -> float:
-    // 7.2.9, Table 86.
-    // 12 bit signed integer shifted by 4. In other words: a 16 bit integer with
-    //   the least significant 4 bits not used.
+    // Section 4.2.
+    // The value is a right-justified, 12-bit two's complement integer.
     // 8 steps per degree. This means that there are 3 fractional bits.
     // If we just wanted to return an integer temperature value we could
-    //   return `value >> 7`.
-    // TODO(florian): check that the least 4 significant bits are equal to 0.
-    //   Shouldn't matter too much if they aren't.
-    low := reg_.read_u8 TEMP_OUT_L_
-    high := reg_.read_u8 TEMP_OUT_H_
-    // value := reg_.read_i16_le TEMP_OUT_L_
-    value := (high << 8) | low
-    // TODO(florian): see whether the division by 8 is correct.
-    // Also: we seem to get very few digits.
+    //   return `value >> 3`.
+    bytes := reg_.read_bytes (TEMP_OUT_L_ | AUTO_INCREMENT_BIT_) 2
+    value := io.LITTLE_ENDIAN.uint16 bytes 0
+    value &= 0x0fff
+    if value & 0x0800 != 0: value -= 0x1000
     return value * (1.0 / 8.0) + 25.0  // Let the compiler constant-fold the division.
 
   /**
@@ -133,10 +141,10 @@ class Magnetometer:
     sensor to measure the magnetic field.
   */
   read -> math.Point3f:
-    AUTO_INCREMENT_BIT ::= 0b1000_0000
-    x := reg_.read_i16_le (OUT_X_L_M_ | AUTO_INCREMENT_BIT)
-    z := reg_.read_i16_le (OUT_Z_L_M_ | AUTO_INCREMENT_BIT)
-    y := reg_.read_i16_le (OUT_Y_L_M_ | AUTO_INCREMENT_BIT)
+    raw := read_raw_
+    x := raw[0]
+    y := raw[1]
+    z := raw[2]
 
     gain := ?
     if range_ == RANGE_2G: gain = 0.080
@@ -148,9 +156,9 @@ class Magnetometer:
       // things easier.
       gain = 0.479
 
-    x_calibrated := x - calibration_[0]
-    y_calibrated := y - calibration_[1]
-    z_calibrated := z - calibration_[2]
+    x_calibrated := (x - calibration_offsets_[0]) * calibration_scales_[0]
+    y_calibrated := (y - calibration_offsets_[1]) * calibration_scales_[1]
+    z_calibrated := (z - calibration_offsets_[2]) * calibration_scales_[2]
 
     x_converted := x_calibrated * gain * (GAUSS_TO_MICROTESLA_ / 1000.0)
     y_converted := y_calibrated * gain * (GAUSS_TO_MICROTESLA_ / 1000.0)
@@ -180,9 +188,42 @@ class Magnetometer:
   read --raw/bool -> List:
     if not raw: throw "INVALID_ARGUMENT"
 
-    AUTO_INCREMENT_BIT ::= 0b1000_0000
-    x := reg_.read_i16_le (OUT_X_H_M_ | AUTO_INCREMENT_BIT)
-    z := reg_.read_i16_le (OUT_Z_H_M_ | AUTO_INCREMENT_BIT)
-    y := reg_.read_i16_le (OUT_Y_H_M_ | AUTO_INCREMENT_BIT)
+    return read_raw_
 
-    return [x, y, z]
+  read_raw_ -> List:
+    bytes := reg_.read_bytes (OUT_X_L_M_ | AUTO_INCREMENT_BIT_) 6
+    return [
+      io.LITTLE_ENDIAN.int16 bytes 0,
+      io.LITTLE_ENDIAN.int16 bytes 2,
+      io.LITTLE_ENDIAN.int16 bytes 4,
+    ]
+
+  set_calibration_ calibration/List -> none:
+    if calibration.size == 3:
+      calibration_offsets_ = calibration
+      calibration_scales_ = [1.0, 1.0, 1.0]
+      return
+
+    if calibration.size != 6: throw "INVALID_CALIBRATION"
+    calibration.do:
+      if it is not num: throw "INVALID_CALIBRATION"
+
+    ranges := [
+      calibration[3] - calibration[0],
+      calibration[4] - calibration[1],
+      calibration[5] - calibration[2],
+    ]
+    ranges.do:
+      if it <= 0: throw "INVALID_CALIBRATION"
+
+    average_range := (ranges[0] + ranges[1] + ranges[2]) / 3.0
+    calibration_offsets_ = [
+      (calibration[3] + calibration[0]) / 2.0,
+      (calibration[4] + calibration[1]) / 2.0,
+      (calibration[5] + calibration[2]) / 2.0,
+    ]
+    calibration_scales_ = [
+      average_range / ranges[0],
+      average_range / ranges[1],
+      average_range / ranges[2],
+    ]

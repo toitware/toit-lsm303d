@@ -51,8 +51,9 @@ main:
     if z > max_z: max_z = z
     counter++
     // Update the store every 32 values.
-    if counter & 0x1F == 0:
-      calibration := [(max_x + min_x) / 2, (max_y + min_y) / 2, (max_z + min_z) / 2]
+    if counter & 0x1F == 0 and
+        min_x < max_x and min_y < max_y and min_z < max_z:
+      calibration := [min_x, min_y, min_z, max_x, max_y, max_z]
       if calibration != old_calibration:
         old_calibration = calibration
         bucket["lsm303d-mag-calibration"] = calibration
