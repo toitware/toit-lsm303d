@@ -15,7 +15,7 @@ main:
     --sda=21
     --scl=22
 
-  device := bus.device Lsm303d.I2C_ADDRESS
+  device := bus.device Lsm303d.I2C-ADDRESS
   lsm303d := Lsm303d device
 
   lsm303d.enable
@@ -24,7 +24,7 @@ main:
     print "Acceleration (in m/s²): $acceleration"
     // The temperature sensor does not provide absolute values, but
     //   could be used to measure temperature swings.
-    temp := lsm303d.magnetometer.read_temperature
+    temp := lsm303d.magnetometer.read-temperature
     print "Temperature: $temp"
 
     field := lsm303d.magnetometer.read

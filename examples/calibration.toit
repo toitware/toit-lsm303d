@@ -25,17 +25,17 @@ main:
     --sda=21
     --scl=22
 
-  device := bus.device Lsm303d.I2C_ADDRESS
+  device := bus.device Lsm303d.I2C-ADDRESS
   lsm303d := Lsm303d device
 
-  min_x := 0x3FFF_FFFF
-  min_y := 0x3FFF_FFFF
-  min_z := 0x3FFF_FFFF
-  max_x := -(0x3FFF_FFFF)
-  max_y := -(0x3FFF_FFFF)
-  max_z := -(0x3FFF_FFFF)
+  min-x := 0x3FFF_FFFF
+  min-y := 0x3FFF_FFFF
+  min-z := 0x3FFF_FFFF
+  max-x := -(0x3FFF_FFFF)
+  max-y := -(0x3FFF_FFFF)
+  max-z := -(0x3FFF_FFFF)
 
-  old_calibration := null
+  old-calibration := null
   lsm303d.magnetometer.enable
   counter := 0
   while true:
@@ -43,19 +43,19 @@ main:
     x := field[0]
     y := field[1]
     z := field[2]
-    if x < min_x: min_x = x
-    if x > max_x: max_x = x
-    if y < min_y: min_y = y
-    if y > max_y: max_y = y
-    if z < min_z: min_z = z
-    if z > max_z: max_z = z
+    if x < min-x: min-x = x
+    if x > max-x: max-x = x
+    if y < min-y: min-y = y
+    if y > max-y: max-y = y
+    if z < min-z: min-z = z
+    if z > max-z: max-z = z
     counter++
     // Update the store every 32 values.
     if counter & 0x1F == 0 and
-        min_x < max_x and min_y < max_y and min_z < max_z:
-      calibration := [min_x, min_y, min_z, max_x, max_y, max_z]
-      if calibration != old_calibration:
-        old_calibration = calibration
+        min-x < max-x and min-y < max-y and min-z < max-z:
+      calibration := [min-x, min-y, min-z, max-x, max-y, max-z]
+      if calibration != old-calibration:
+        old-calibration = calibration
         bucket["lsm303d-mag-calibration"] = calibration
         print "New calibration: $calibration"
     sleep --ms=50

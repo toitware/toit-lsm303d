@@ -8,15 +8,15 @@ import math
 import serial.device as serial
 
 class Lsm303d:
-  static I2C_ADDRESS ::= 0b11101  // 6.1.1.
-  static I2C_ADDRESS_ALT ::= 0b11110
+  static I2C-ADDRESS ::= 0b11101  // 6.1.1.
+  static I2C-ADDRESS-ALT ::= 0b11110
 
   accelerometer /Accelerometer
   magnetometer  /Magnetometer
 
-  constructor device/serial.Device --mag_calibration/List?=null:
+  constructor device/serial.Device --mag-calibration/List?=null:
     accelerometer = Accelerometer device
-    magnetometer  = Magnetometer device --calibration=mag_calibration
+    magnetometer  = Magnetometer device --calibration=mag-calibration
 
   /**
   Enables the accelerometer and magnetometer with default values.
@@ -35,30 +35,30 @@ class Lsm303d:
 
   Returns the heading in degrees.
   */
-  heading base_vector/math.Point3f -> float:
-    a_vector := accelerometer.read
-    mag_vector := magnetometer.read
+  heading base-vector/math.Point3f -> float:
+    a-vector := accelerometer.read
+    mag-vector := magnetometer.read
 
-    e_vector := vector_cross_ mag_vector a_vector
-    e_normalized := vector_normalize_ e_vector
-    n_vector := vector_cross_ a_vector e_normalized
-    n_normalized := vector_normalize_ n_vector
+    e-vector := vector-cross_ mag-vector a-vector
+    e-normalized := vector-normalize_ e-vector
+    n-vector := vector-cross_ a-vector e-normalized
+    n-normalized := vector-normalize_ n-vector
 
-    heading_rads := math.atan2
-        vector_dot_ e_normalized base_vector
-        vector_dot_ n_normalized base_vector
-    heading := heading_rads * 180 / math.PI
+    heading-rads := math.atan2
+        vector-dot_ e-normalized base-vector
+        vector-dot_ n-normalized base-vector
+    heading := heading-rads * 180 / math.PI
     return heading
 
-vector_cross_ v1/math.Point3f v2/math.Point3f -> math.Point3f:
+vector-cross_ v1/math.Point3f v2/math.Point3f -> math.Point3f:
   return math.Point3f
       v1.y * v2.z - v1.z * v2.y
       v1.z * v2.x - v1.x * v2.z
       v1.x * v2.y - v1.y * v2.x
 
-vector_dot_ v1/math.Point3f v2/math.Point3f -> float:
+vector-dot_ v1/math.Point3f v2/math.Point3f -> float:
   return (v1.x * v2.x) + (v1.y * v2.y) + (v1.z * v2.z)
 
-vector_normalize_ v/math.Point3f -> math.Point3f:
-  len := math.sqrt (vector_dot_ v v)
+vector-normalize_ v/math.Point3f -> math.Point3f:
+  len := math.sqrt (vector-dot_ v v)
   return v / len

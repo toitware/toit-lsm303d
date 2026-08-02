@@ -16,14 +16,14 @@ main:
     --sda=21
     --scl=22
 
-  device := bus.device Lsm303d.I2C_ADDRESS
+  device := bus.device Lsm303d.I2C-ADDRESS
   bucket := storage.Bucket.open --flash "toitware/toit-lsm303d"
   // If it doesn't exist, then the default value is used.
-  mag_calibration := bucket.get "lsm303d-mag-calibration"
-  if mag_calibration:
-    print "Using calibration: $mag_calibration"
+  mag-calibration := bucket.get "lsm303d-mag-calibration"
+  if mag-calibration:
+    print "Using calibration: $mag-calibration"
 
-  lsm303d := Lsm303d device --mag_calibration=mag_calibration
+  lsm303d := Lsm303d device --mag-calibration=mag-calibration
   lsm303d.enable
 
   top := math.Point3f 1.0 0.0 0.0
