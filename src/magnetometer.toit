@@ -123,6 +123,7 @@ class Magnetometer:
   */
   read_temperature -> float:
     // Section 4.2.
+    // Unlike the LSM303DLHC, the LSM303D stores temperature right-justified.
     // The value is a right-justified, 12-bit two's complement integer.
     // 8 steps per degree. This means that there are 3 fractional bits.
     // If we just wanted to return an integer temperature value we could
